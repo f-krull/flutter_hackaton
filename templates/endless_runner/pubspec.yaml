@@ -39,6 +39,7 @@ flutter:
     - assets/images/dash/
     - assets/images/enemies/
     - assets/images/scenery/
+    - assets/images/ground/
     - assets/music/
     - assets/sfx/
 

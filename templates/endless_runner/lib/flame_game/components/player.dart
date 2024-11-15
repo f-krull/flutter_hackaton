@@ -1,3 +1,4 @@
+import 'package:endless_runner/flame_game/effects/fly_effect.dart';
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/animation.dart';
@@ -29,6 +30,8 @@ class Player extends SpriteAnimationGroupComponent<PlayerState>
   // The current velocity that the player has that comes from being affected by
   // the gravity. Defined in virtual pixels/s².
   double _gravityVelocity = 0;
+  double _flyVelocity = 0;
+  final double _flyAcceleration = 20;
 
   // The maximum length that the player can jump. Defined in virtual pixels.
   final double _jumpLength = 600;
@@ -44,6 +47,7 @@ class Player extends SpriteAnimationGroupComponent<PlayerState>
   // When the player has velocity pointing downwards it is counted as falling,
   // this is used to set the correct animation for the player.
   bool get isFalling => _lastPosition.y < position.y;
+  bool get isFlying => current == PlayerState.flying;
 
   @override
   Future<void> onLoad() async {
@@ -58,6 +62,10 @@ class Player extends SpriteAnimationGroupComponent<PlayerState>
         ),
       ),
       PlayerState.jumping: SpriteAnimation.spriteList(
+        [await game.loadSprite('dash/dash_jumping.png')],
+        stepTime: double.infinity,
+      ),
+      PlayerState.flying: SpriteAnimation.spriteList(
         [await game.loadSprite('dash/dash_jumping.png')],
         stepTime: double.infinity,
       ),
@@ -81,12 +89,13 @@ class Player extends SpriteAnimationGroupComponent<PlayerState>
     super.update(dt);
     // When we are in the air the gravity should affect our position and pull
     // us closer to the ground.
-    if (inAir) {
+    if (!isFlying) {
       _gravityVelocity += world.gravity * dt;
       position.y += _gravityVelocity;
-      if (isFalling) {
-        current = PlayerState.falling;
-      }
+    }
+    if (isFlying) {
+      _flyVelocity += _flyAcceleration * dt;
+      position.y -= _flyVelocity;
     }
 
     final belowGround = position.y + size.y / 2 > world.groundLevel;
@@ -136,10 +145,21 @@ class Player extends SpriteAnimationGroupComponent<PlayerState>
       add(jumpEffect);
     }
   }
+
+  void startFlying() {
+    current = PlayerState.flying;
+    _flyVelocity = 0;
+  }
+
+  void stopFlying() {
+    _gravityVelocity = 0;
+    current = PlayerState.falling;
+  }
 }
 
 enum PlayerState {
   running,
   jumping,
   falling,
+  flying,
 }

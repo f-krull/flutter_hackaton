@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:endless_runner/flame_game/components/ground.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/experimental.dart';
@@ -60,7 +61,7 @@ class EndlessWorld extends World with TapCallbacks, HasGameReference {
   final double gravity = 30;
 
   /// Where the ground is located in the world and things should stop falling.
-  late final double groundLevel = (size.y / 2) - (size.y / 5);
+  late final double groundLevel = size.y / 2;
 
   @override
   Future<void> onLoad() async {
@@ -71,39 +72,20 @@ class EndlessWorld extends World with TapCallbacks, HasGameReference {
     // The player is the component that we control when we tap the screen, the
     // Dash in this case.
     player = Player(
-      position: Vector2(-size.x / 3, groundLevel - 900),
+      position: Vector2(-size.x / 3, groundLevel - 500),
       addScore: addScore,
       resetScore: resetScore,
     );
     add(player);
-
-    add(
-      SpawnComponent(
-        factory: (_) => Obstacle.random(
-          random: _random,
-          canSpawnTall: level.canSpawnTall,
-        ),
-        period: 5,
-        area: Rectangle.fromPoints(
-          Vector2(size.x / 2, groundLevel),
-          Vector2(size.x / 2, groundLevel),
-        ),
-        random: _random,
-      ),
-    );
-
-    add(
-      SpawnComponent.periodRange(
-        factory: (_) => Point(),
-        minPeriod: 3.0,
-        maxPeriod: 5.0 + level.number,
-        area: Rectangle.fromPoints(
-          Vector2(size.x / 2, -size.y / 2 + Point.spriteSize.y),
-          Vector2(size.x / 2, groundLevel),
-        ),
-        random: _random,
-      ),
-    );
+    final numberOfGrounds = 10;
+    for (int i = 0; i < numberOfGrounds; i++) {
+      add(Ground(
+          pixelHeight: 10.0 * i,
+          index: i,
+          maxGrounds: numberOfGrounds,
+          position: Vector2(size.x / 2 + (size.x / numberOfGrounds * 2) * i,
+              groundLevel - 10.0 * i)));
+    }
 
     // When the player takes a new point we check if the score is enough to
     // pass the level and if it is we calculate what time the level was passed
@@ -151,15 +133,17 @@ class EndlessWorld extends World with TapCallbacks, HasGameReference {
   /// if and how the player should jump.
   @override
   void onTapDown(TapDownEvent event) {
-    // Which direction the player should jump.
-    final towards = (event.localPosition - player.position)..normalize();
-    // If the tap is underneath the player no jump is triggered, but if it is
-    // above the player it triggers a jump, even though the player might be in
-    // the air. This makes it possible to later implement double jumping inside
-    // of the `player` class if one would want to.
-    if (towards.y.isNegative) {
-      player.jump(towards);
-    }
+    player.startFlying();
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    player.stopFlying();
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    player.stopFlying();
   }
 
   /// A helper function to define how fast a certain level should be.
